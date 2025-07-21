@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 
 from cleo.commands.command import Command
 from cleo.helpers import option
@@ -43,7 +44,7 @@ class SubscriptionAddCommand(Command):
         elif self.option("tx-device-host"):
             tx_device = next(
                 filter(
-                    lambda d: d[1].ipv4 == self.option("tx-device-host"),
+                    lambda d: d[1].ipv4 == ipaddress.ip_address(self.option("tx-device-host")),
                     dante_devices.items(),
                 )
             )[1]
@@ -51,16 +52,14 @@ class SubscriptionAddCommand(Command):
         if self.option("tx-channel-name"):
             tx_channel = next(
                 filter(
-                    lambda c: self.option("tx-channel-name") == c[1].friendly_name
-                    or self.option("tx-channel-name") == c[1].name
-                    and not c[1].friendly_name,
+                    lambda c: c[1].matches_name(self.option("tx-channel-name")),
                     tx_device.tx_channels.items(),
                 )
             )[1]
         elif self.option("tx-channel-number"):
             tx_channel = next(
                 filter(
-                    lambda c: c[1].number == self.option("tx-channel-number"),
+                    lambda c: c[1].number == int(self.option("tx-channel-number")),
                     tx_device.tx_channels.items(),
                 )
             )[1]
@@ -75,7 +74,7 @@ class SubscriptionAddCommand(Command):
         elif self.option("rx-device-host"):
             rx_device = next(
                 filter(
-                    lambda d: d[1].ipv4 == self.option("rx-device-host"),
+                    lambda d: d[1].ipv4 == ipaddress.ip_address(self.option("rx-device-host")),
                     dante_devices.items(),
                 )
             )[1]
@@ -83,14 +82,14 @@ class SubscriptionAddCommand(Command):
         if self.option("rx-channel-name"):
             rx_channel = next(
                 filter(
-                    lambda c: c[1].name == self.option("rx-channel-name"),
+                    lambda c: c[1].matches_name(self.option("rx-channel-name")),
                     rx_device.rx_channels.items(),
                 )
             )[1]
         elif self.option("rx-channel-number"):
             rx_channel = next(
                 filter(
-                    lambda c: c[1].number == self.option("rx-channel-number"),
+                    lambda c: c[1].number == int(self.option("rx-channel-number")),
                     rx_device.rx_channels.items(),
                 )
             )[1]
@@ -98,9 +97,9 @@ class SubscriptionAddCommand(Command):
         if rx_device and not tx_device:
             tx_device = rx_device
 
-        if rx_channel and rx_device and tx_channel and tx_channel:
+        if rx_channel and rx_device and tx_channel and tx_device:
             self.line(
-                f"{rx_channel.name}@{rx_device.name} <- {tx_channel.name}@{tx_device.name}"
+                f"{rx_channel.subscription_name}@{rx_device.name} <- {tx_channel.subscription_name}@{tx_device.name}"
             )
             await rx_device.add_subscription(rx_channel, tx_channel, tx_device)
 
